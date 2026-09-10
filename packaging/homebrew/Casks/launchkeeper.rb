@@ -18,7 +18,7 @@ cask "launchkeeper" do
   # Only an aarch64 dmg is published; the Formula covers everything else.
   depends_on arch: :arm64
   # Matches bundle.macOS.minimumSystemVersion in tauri.conf.json.
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "Launchkeeper.app"
   # The same `launchkeeper` binary the Formula installs, signed with the app,
