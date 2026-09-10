@@ -99,7 +99,6 @@ rewrite_cask() {
     -e "s|^\( *version \).*|\1\"$version\"|" \
     -e "s|^\( *sha256 \).*|\1\"$dmg_sha\"|" \
     -e "s|^\( *url \).*|\1\"$cask_url\",|" \
-    -e "s|^\( *verified: \).*|\1\"github.com/$RELEASE_REPO/\"|" \
     -e "s|^\( *homepage \).*|\1\"$base\"|" \
     "$cask"
 }

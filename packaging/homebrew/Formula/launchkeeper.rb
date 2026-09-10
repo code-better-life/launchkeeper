@@ -25,7 +25,6 @@ class Launchkeeper < Formula
   depends_on "rust" => :build
   # launchd LaunchAgents, `launchctl bootstrap gui/$UID`, TCC: none of this
   # has a meaning off macOS.
-  depends_on :macos
   depends_on macos: :ventura
 
   def install
@@ -62,7 +61,7 @@ class Launchkeeper < Formula
 
     # The runner must be found without --runner or LAUNCHKEEPER_RUNNER: that
     # sibling lookup is the whole reason both binaries go into the same bin/.
-    assert_predicate bin/"launchkeeper-runner", :exist?
+    assert_path_exists bin/"launchkeeper-runner"
 
     # An empty data dir in the sandbox: proves the store is created and the
     # machine-readable contract holds, without touching the real one. All

@@ -9,8 +9,7 @@ cask "launchkeeper" do
   version "0.1.0"
   sha256 "4077a632a664cea0889b2677136237f75b02ae113bbdaf4ed6d07855d4d9b239"
 
-  url "https://github.com/code-better-life/launchkeeper/releases/download/v#{version}/Launchkeeper_#{version}_aarch64.dmg",
-      verified: "github.com/code-better-life/launchkeeper/"
+  url "https://github.com/code-better-life/launchkeeper/releases/download/v#{version}/Launchkeeper_#{version}_aarch64.dmg"
   name "Launchkeeper"
   desc "Visual manager for launchd automation tasks"
   homepage "https://github.com/code-better-life/launchkeeper"
@@ -37,15 +36,15 @@ cask "launchkeeper" do
   # they existed before Launchkeeper and outlive it; `launchkeeper unadopt`
   # restores those from their .bak.
   zap launchctl: "com.launchkeeper.*",
-      trash:      [
-        "~/Library/LaunchAgents/com.launchkeeper.*.plist",
+      trash:     [
+        "~/.config/launchkeeper",
         "~/Library/Application Support/Launchkeeper",
-        "~/Library/Logs/Launchkeeper",
         "~/Library/Caches/com.launchkeeper.app",
         "~/Library/HTTPStorages/com.launchkeeper.app",
+        "~/Library/LaunchAgents/com.launchkeeper.*.plist",
+        "~/Library/Logs/Launchkeeper",
         "~/Library/Preferences/com.launchkeeper.app.plist",
         "~/Library/Saved Application State/com.launchkeeper.app.savedState",
         "~/Library/WebKit/com.launchkeeper.app",
-        "~/.config/launchkeeper",
       ]
 end
