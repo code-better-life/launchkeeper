@@ -58,6 +58,13 @@ log "打包 app + dmg"
 # The overlay config adds `externalBin`; it is kept out of the main config so
 # that `pnpm tauri dev` does not demand the copied binaries. See
 # crates/launchkeeper-app/scripts/prepare-runner.mjs.
+# CI exports the APPLE_* secrets even when they are unset (empty strings);
+# Tauri's bundler treats a *present* APPLE_CERTIFICATE as "import this into
+# the keychain" and fails on the empty value. Drop empty ones first.
+for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+         APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+  if [ -z "$(eval "printf '%s' \"\${$v:-}\"")" ]; then unset "$v"; fi
+done
 (cd "$app_dir" && pnpm tauri build --config "$bundle_conf")
 
 bundle_dir="$repo_root/target/release/bundle"
