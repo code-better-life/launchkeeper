@@ -18,7 +18,7 @@ class Launchkeeper < Formula
   desc "Visual manager for launchd automation tasks (CLI)"
   homepage "https://github.com/code-better-life/launchkeeper"
   url "https://github.com/code-better-life/launchkeeper/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "9531bd98b8697e22724605cc36c0855bfa209a08596d58936674d065cb192f9f"
   license "MIT"
   head "https://github.com/code-better-life/launchkeeper.git", branch: "main"
 

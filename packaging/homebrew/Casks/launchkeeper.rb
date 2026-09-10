@@ -7,7 +7,7 @@
 # in this file; the owner comes from packaging/homebrew/repo.env.
 cask "launchkeeper" do
   version "0.1.0"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "4077a632a664cea0889b2677136237f75b02ae113bbdaf4ed6d07855d4d9b239"
 
   url "https://github.com/code-better-life/launchkeeper/releases/download/v#{version}/Launchkeeper_#{version}_aarch64.dmg",
       verified: "github.com/code-better-life/launchkeeper/"
