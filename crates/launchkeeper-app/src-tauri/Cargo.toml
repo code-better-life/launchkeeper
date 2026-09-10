@@ -1,0 +1,30 @@
+[package]
+name = "launchkeeper-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Launchkeeper desktop app (Tauri 2)"
+
+# `main.rs` is a thin wrapper around this library so that the specta binding
+# export can live in a `#[cfg(test)]` test (`cargo test -p launchkeeper-app`).
+[lib]
+name = "launchkeeper_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+launchkeeper-core = { workspace = true, features = ["specta"] }
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-notification = "2"
+specta.workspace = true
+specta-typescript = { version = "0.0.12", features = ["serde"] }
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
+
+[dev-dependencies]
+tempfile.workspace = true

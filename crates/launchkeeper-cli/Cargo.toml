@@ -1,0 +1,26 @@
+[package]
+name = "launchkeeper-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Script- and AI-agent-friendly command-line interface to launchkeeper-core"
+
+[[bin]]
+name = "launchkeeper"
+path = "src/main.rs"
+
+[dependencies]
+launchkeeper-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+plist.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+assert_cmd.workspace = true
+predicates.workspace = true

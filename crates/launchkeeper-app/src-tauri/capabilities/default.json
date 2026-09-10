@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Launchkeeper 主窗口的权限：核心窗口控制与事件，外加失败通知（M3 §4）。「在 Finder 中显示」走自己的 reveal_in_finder 命令（open -R），不需要 opener 插件。",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-visible",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "notification:default"
+  ]
+}

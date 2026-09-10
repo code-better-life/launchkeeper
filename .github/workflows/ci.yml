@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Every test that writes a plist or shells out to launchctl must redirect
+  # all three of these; a runner is a shared machine and ~/Library is real.
+  # The suites set them per-test, this is the belt-and-braces layer.
+  LAUNCHKEEPER_DATA_DIR: ${{ github.workspace }}/.ci/data
+  LAUNCHKEEPER_LAUNCH_AGENTS_DIR: ${{ github.workspace }}/.ci/LaunchAgents
+  LAUNCHKEEPER_RUNNER_LOG_DIR: ${{ github.workspace }}/.ci/logs
+
+jobs:
+  check:
+    # launchd, launchctl and the whole plist layer only exist on macOS, and
+    # macos-latest is arm64 — the only architecture this ships for.
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the scratch directories the env vars point at
+        run: mkdir -p .ci/data .ci/LaunchAgents .ci/logs
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: crates/launchkeeper-app/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: crates/launchkeeper-app
+        run: pnpm install --frozen-lockfile
+
+      # Must come before anything that compiles launchkeeper-app: tauri-build
+      # refuses to run when `frontendDist` (../dist) does not exist, and dist/
+      # is not committed.
+      - name: Build the frontend
+        working-directory: crates/launchkeeper-app
+        run: pnpm build
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace
+
+      - name: Frontend tests
+        working-directory: crates/launchkeeper-app
+        run: pnpm test
+
+      # Guards the one thing that cannot be undone after publishing: the
+      # author's private project names must never reach a public commit.
+      - name: Privacy check
+        run: scripts/check-privacy.sh

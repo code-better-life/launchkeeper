@@ -1,0 +1,16 @@
+/target
+CLAUDE.local.md
+.env
+.DS_Store
+
+# 前端
+node_modules
+dist
+crates/launchkeeper-app/.svelte-kit
+
+# Tauri 生成物
+crates/launchkeeper-app/src-tauri/gen
+crates/launchkeeper-app/src-tauri/binaries
+.playwright-mcp
+docs/private/
+crates/launchkeeper-app/.npmrc

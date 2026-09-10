@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Developer ID build (`bundle.macOS.entitlements`).
+
+  Tauri always signs macOS bundles with the hardened runtime (`codesign
+  --options runtime`), which notarization requires, and the hardened runtime
+  is what makes this file necessary at all: everything below re-enables
+  something the hardened runtime switched off.
+
+  Deliberately NOT present:
+  - App Sandbox (`com.apple.security.app-sandbox`). Launchkeeper's whole job
+    is writing `~/Library/LaunchAgents` and running user scripts from
+    anywhere; a sandbox would have to be punched through for each of those,
+    and Developer ID distribution does not require one.
+  - `com.apple.security.cs.disable-library-validation`. Nothing loads
+    third-party plug-ins into this process.
+  - `com.apple.security.cs.allow-dyld-environment-variables`. The runner
+    passes a PATH to its children through the normal environment, never
+    through DYLD_*.
+-->
+<plist version="1.0">
+<dict>
+	<!--
+	  WKWebView's JavaScript JIT lives in the WebKit helper processes, but the
+	  app process itself maps JIT pages for the IPC bridge on some macOS
+	  versions. Without this the webview can be killed on launch with
+	  EXC_BAD_ACCESS under the hardened runtime.
+	-->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,81 @@
+/* 全局基础样式。UI 框架一律不引，配色靠 CSS 变量跟随系统深浅色。
+ *
+ * 深色的那份 token 写了两遍（M4 §4）：一遍在媒体查询里、带
+ * `:not([data-theme="light"])` 的守卫，一遍在 `[data-theme="dark"]` 里。前者
+ * 是「跟随系统」下的深色，后者让用户在浅色系统上也能选深色；守卫则让用户在
+ * 深色系统上能选回浅色。三种选择因此都只靠 `<html>` 上一个属性表达，
+ * `src/lib/theme.ts` 负责盖它（跟随系统 = 不盖）。
+ *
+ * 浅色是**唯一**无条件定义整套变量的地方：任何一个颜色都不能只写在媒体查询或
+ * `[data-theme]` 块里，否则某一种组合下它就没有值。 */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #6b6b70;
+  --border: #dcdce0;
+  --surface: #f6f6f8;
+  --surface-hover: #ececef;
+  --accent: #0a6cff;
+  --status-ok: #29a745;
+  --status-failed: #d7443e;
+  --status-running: #0a6cff;
+  --status-gray: #9a9aa0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Helvetica Neue", sans-serif;
+  font-size: 13px;
+}
+
+/* 跟随系统（没有 data-theme）时的深色；显式选了浅色就跳过。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #1c1c1e;
+    --fg: #f2f2f7;
+    --muted: #98989d;
+    --border: #3a3a3c;
+    --surface: #2c2c2e;
+    --surface-hover: #333335;
+    --accent: #3b93ff;
+  }
+}
+
+/* 显式选了深色：在浅色系统上也生效。 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1c1e;
+  --fg: #f2f2f7;
+  --muted: #98989d;
+  --border: #3a3a3c;
+  --surface: #2c2c2e;
+  --surface-hover: #333335;
+  --accent: #3b93ff;
+}
+
+/* 显式选了浅色：`color-scheme` 也要跟着回来，不然滚动条、原生控件还是深的。 */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  overflow-x: hidden;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+}

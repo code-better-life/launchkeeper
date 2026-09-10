@@ -1,0 +1,185 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    env:
+      # Signing and notarization are all-or-nothing and entirely optional:
+      # with none of these secrets set the job still runs to completion and
+      # publishes an ad-hoc-signed dmg (see scripts/release/build-dmg.sh).
+      # That is the state of the repo until a Developer ID exists — better a
+      # release users must right-click > Open than no release at all.
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Resolve the version
+        id: v
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          cargo_version=$(awk '/^\[workspace\.package\]/{f=1;next} /^\[/{f=0} f && /^version[[:space:]]*=/{gsub(/[",]/,"",$3); print $3; exit}' Cargo.toml)
+          if [ "$version" != "$cargo_version" ]; then
+            echo "::error::tag $tag says $version but Cargo.toml says $cargo_version" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >>"$GITHUB_OUTPUT"
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: crates/launchkeeper-app/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: crates/launchkeeper-app
+        run: pnpm install --frozen-lockfile
+
+      # A Developer ID certificate only becomes usable to codesign after it
+      # is imported into a keychain that is on the search list and unlocked.
+      # The keychain is throwaway and dies with the runner.
+      - name: Import the Developer ID certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/build.keychain-db"
+          echo "$APPLE_CERTIFICATE" | base64 --decode >"$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          # Without this codesign blocks on a GUI prompt that nobody can answer.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$keychain" >/dev/null
+          security list-keychain -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security find-identity -v -p codesigning "$keychain"
+
+      - name: Build the dmg
+        run: scripts/release/build-dmg.sh
+
+      - name: Build the CLI tarball
+        run: scripts/release/package-cli.sh
+
+      - name: Collect the artifacts
+        id: art
+        run: |
+          set -euo pipefail
+          version="${{ steps.v.outputs.version }}"
+          mkdir -p dist
+          dmg=$(ls -t target/release/bundle/dmg/*.dmg | head -1)
+          cp "$dmg" "dist/Launchkeeper_${version}_aarch64.dmg"
+          cp target/release/dist/launchkeeper-cli-"$version"-*.tar.gz dist/
+          echo "dmg=dist/Launchkeeper_${version}_aarch64.dmg" >>"$GITHUB_OUTPUT"
+
+      # Notarization is what removes the "unidentified developer" dialog. It
+      # needs an app-specific password (APPLE_PASSWORD), not the Apple ID
+      # password. Stapling writes the ticket into the dmg so that a machine
+      # that is offline on first launch is still satisfied.
+      - name: Notarize and staple
+        if: env.APPLE_ID != '' && env.APPLE_SIGNING_IDENTITY != ''
+        run: |
+          set -euo pipefail
+          dmg="${{ steps.art.outputs.dmg }}"
+          xcrun notarytool submit "$dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait --timeout 30m
+          xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature -vv "$dmg"
+
+      - name: Checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          for f in *.dmg *.tar.gz; do
+            shasum -a 256 "$f" >"$f.sha256"
+          done
+          cat ./*.sha256
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The only place owner/repo is written down.
+          . packaging/homebrew/repo.env
+          # `brew tap owner/name` drops the `homebrew-` the repo name carries.
+          tap_short="${TAP_REPO%%/*}/${TAP_REPO#*/homebrew-}"
+          tag="${{ steps.v.outputs.tag }}"
+          notes=$(mktemp)
+          {
+            echo "## Launchkeeper ${{ steps.v.outputs.version }}"
+            echo
+            if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+              echo "The app is signed with a Developer ID and notarized."
+            else
+              echo "**This build is not notarized.** macOS will refuse the first launch;"
+              echo "right-click the app in /Applications and choose *Open* once."
+            fi
+            echo
+            echo '```sh'
+            echo "brew tap $tap_short"
+            echo "brew install launchkeeper          # CLI + runner"
+            echo "brew install --cask launchkeeper   # desktop app"
+            echo '```'
+          } >"$notes"
+          gh release create "$tag" dist/* \
+            --title "Launchkeeper ${{ steps.v.outputs.version }}" \
+            --notes-file "$notes" \
+            --verify-tag || \
+          gh release upload "$tag" dist/* --clobber
+
+      # Last, and only with a token: the tap must never point at a release
+      # that does not exist yet.
+      - name: Update the Homebrew tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          set -euo pipefail
+          version="${{ steps.v.outputs.version }}"
+          dmg_sha=$(cut -d' ' -f1 <"dist/Launchkeeper_${version}_aarch64.dmg.sha256")
+          scripts/release/update-tap.sh "$version" --dmg-sha256 "$dmg_sha" --push

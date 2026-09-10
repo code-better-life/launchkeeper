@@ -1,0 +1,20 @@
+[package]
+name = "launchkeeper-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Thin wrapper launched by launchd: runs the user script, captures logs, records the run"
+
+[[bin]]
+name = "launchkeeper-runner"
+path = "src/main.rs"
+
+[dependencies]
+launchkeeper-core.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+signal-hook.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

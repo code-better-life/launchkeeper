@@ -1,0 +1,39 @@
+{
+  "name": "launchkeeper-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "svelte-check --tsconfig ./tsconfig.json && vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "tauri": "tauri",
+    "bindings": "cargo test -p launchkeeper-app export_bindings",
+    "prepare-runner": "node scripts/prepare-runner.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "bundle": "pnpm prepare-runner && tauri build --config src-tauri/tauri.bundle.conf.json"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@tauri-apps/cli": "^2.9.1",
+    "jsdom": "27.0.0",
+    "playwright-core": "1.63.0",
+    "svelte": "^5.42.2",
+    "svelte-check": "^4.3.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.9.0",
+    "dompurify": "3.2.7",
+    "marked": "16.4.0"
+  }
+}
